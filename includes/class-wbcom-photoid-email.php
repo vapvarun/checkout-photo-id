@@ -43,258 +43,21 @@ class Wbcom_PhotoID_Email {
 	 * @return array
 	 */
 	public function register_email_classes( $email_classes ) {
-		// Define and include custom email classes only when WooCommerce is active.
+		// Check if WooCommerce email classes are available.
 		if ( ! class_exists( 'WC_Email' ) ) {
 			return $email_classes; // Return unchanged if WC_Email doesn't exist.
 		}
 		
-		// Load our custom email classes.
-		$this->load_email_classes();
+		// Register custom email classes, but only if they exist (they're defined outside this class).
+		if ( class_exists( 'Wbcom_PhotoID_Request_Email' ) ) {
+			$email_classes['Wbcom_PhotoID_Request_Email'] = new Wbcom_PhotoID_Request_Email();
+		}
 		
-		// Register custom email classes.
-		$email_classes['Wbcom_PhotoID_Request_Email'] = new Wbcom_PhotoID_Request_Email();
-		$email_classes['Wbcom_PhotoID_Admin_Notification'] = new Wbcom_PhotoID_Admin_Notification();
+		if ( class_exists( 'Wbcom_PhotoID_Admin_Notification' ) ) {
+			$email_classes['Wbcom_PhotoID_Admin_Notification'] = new Wbcom_PhotoID_Admin_Notification();
+		}
 		
 		return $email_classes;
-	}
-	
-	/**
-	 * Load and define custom email classes only when needed.
-	 */
-	public function load_email_classes() {
-		// Only define these classes if the parent WC_Email class exists.
-		if ( ! class_exists( 'WC_Email' ) ) {
-			return;
-		}
-		
-		// Check if our classes are already defined.
-		if ( class_exists( 'Wbcom_PhotoID_Request_Email' ) ) {
-			return;
-		}
-		
-		// Define request email class.
-		class Wbcom_PhotoID_Request_Email extends WC_Email {
-			/**
-			 * Custom message from admin.
-			 *
-			 * @var string
-			 */
-			public $custom_message = '';
-			
-			/**
-			 * Upload URL for customer.
-			 *
-			 * @var string
-			 */
-			public $upload_url = '';
-			
-			/**
-			 * Constructor.
-			 */
-			public function __construct() {
-				$this->id             = 'wbcom_photoid_request';
-				$this->customer_email = true;
-				$this->title          = __( 'Photo ID Request', 'wbcom-photoid' );
-				$this->description    = __( 'This email is sent to customers when an admin requests a photo ID upload.', 'wbcom-photoid' );
-				$this->template_html  = 'emails/photoid-request.php';
-				$this->template_plain = 'emails/plain/photoid-request.php';
-				$this->placeholders   = array(
-					'{site_title}'      => $this->get_blogname(),
-					'{order_number}'    => '',
-					'{customer_name}'   => '',
-				);
-				
-				// Call parent constructor.
-				parent::__construct();
-				
-				// Default subject and heading.
-				$this->subject = __( 'Action Required: Please upload your ID for order #{order_number}', 'wbcom-photoid' );
-				$this->heading = __( 'Please upload your ID', 'wbcom-photoid' );
-			}
-			
-			/**
-			 * Get email subject.
-			 *
-			 * @return string
-			 */
-			public function get_subject() {
-				return apply_filters( 'wbcom_photoid_request_email_subject', $this->format_string( $this->subject ), $this->object );
-			}
-			
-			/**
-			 * Get email heading.
-			 *
-			 * @return string
-			 */
-			public function get_heading() {
-				return apply_filters( 'wbcom_photoid_request_email_heading', $this->format_string( $this->heading ), $this->object );
-			}
-			
-			/**
-			 * Trigger the sending of this email.
-			 *
-			 * @param int $order_id Order ID.
-			 * @return bool
-			 */
-			public function trigger( $order_id ) {
-				$this->setup_locale();
-				
-				if ( $order_id ) {
-					$this->object = wc_get_order( $order_id );
-					
-					if ( ! $this->object ) {
-						return false;
-					}
-					
-					$this->recipient = $this->object->get_billing_email();
-					
-					$this->placeholders['{order_number}'] = $this->object->get_order_number();
-					$this->placeholders['{customer_name}'] = $this->object->get_formatted_billing_full_name();
-				}
-				
-				if ( $this->is_enabled() && $this->get_recipient() ) {
-					return $this->send( $this->get_recipient(), $this->get_subject(), $this->get_content(), $this->get_headers(), $this->get_attachments() );
-				}
-				
-				$this->restore_locale();
-				
-				return false;
-			}
-			
-			/**
-			 * Get content HTML.
-			 *
-			 * @return string
-			 */
-			public function get_content_html() {
-				return wc_get_template_html(
-					$this->template_html,
-					array(
-						'order'          => $this->object,
-						'email_heading'  => $this->get_heading(),
-						'custom_message' => $this->custom_message,
-						'upload_url'     => $this->upload_url,
-						'sent_to_admin'  => false,
-						'plain_text'     => false,
-						'email'          => $this,
-					)
-				);
-			}
-			
-			/**
-			 * Get content plain.
-			 *
-			 * @return string
-			 */
-			public function get_content_plain() {
-				return wc_get_template_html(
-					$this->template_plain,
-					array(
-						'order'          => $this->object,
-						'email_heading'  => $this->get_heading(),
-						'custom_message' => $this->custom_message,
-						'upload_url'     => $this->upload_url,
-						'sent_to_admin'  => false,
-						'plain_text'     => true,
-						'email'          => $this,
-					)
-				);
-			}
-		}
-		
-		// Define admin notification email class.
-		class Wbcom_PhotoID_Admin_Notification extends WC_Email {
-			/**
-			 * Constructor.
-			 */
-			public function __construct() {
-				$this->id             = 'wbcom_photoid_admin_notification';
-				$this->title          = __( 'Photo ID Uploaded', 'wbcom-photoid' );
-				$this->description    = __( 'This email is sent to admins when a customer uploads a photo ID.', 'wbcom-photoid' );
-				$this->template_html  = 'emails/photoid-admin-notification.php';
-				$this->template_plain = 'emails/plain/photoid-admin-notification.php';
-				$this->placeholders   = array(
-					'{site_title}'      => $this->get_blogname(),
-					'{order_number}'    => '',
-					'{customer_name}'   => '',
-				);
-				
-				// Set default recipient to admin email.
-				$this->recipient = get_option( 'admin_email' );
-				
-				// Call parent constructor.
-				parent::__construct();
-				
-				// Default subject and heading.
-				$this->subject = __( 'Photo ID Uploaded for Order #{order_number}', 'wbcom-photoid' );
-				$this->heading = __( 'Photo ID Uploaded', 'wbcom-photoid' );
-			}
-			
-			/**
-			 * Trigger the sending of this email.
-			 *
-			 * @param int $order_id Order ID.
-			 * @return bool
-			 */
-			public function trigger( $order_id ) {
-				$this->setup_locale();
-				
-				if ( $order_id ) {
-					$this->object = wc_get_order( $order_id );
-					
-					if ( ! $this->object ) {
-						return false;
-					}
-					
-					$this->placeholders['{order_number}'] = $this->object->get_order_number();
-					$this->placeholders['{customer_name}'] = $this->object->get_formatted_billing_full_name();
-				}
-				
-				if ( $this->is_enabled() && $this->get_recipient() ) {
-					return $this->send( $this->get_recipient(), $this->get_subject(), $this->get_content(), $this->get_headers(), $this->get_attachments() );
-				}
-				
-				$this->restore_locale();
-				
-				return false;
-			}
-			
-			/**
-			 * Get content HTML.
-			 *
-			 * @return string
-			 */
-			public function get_content_html() {
-				return wc_get_template_html(
-					$this->template_html,
-					array(
-						'order'         => $this->object,
-						'email_heading' => $this->get_heading(),
-						'sent_to_admin' => true,
-						'plain_text'    => false,
-						'email'         => $this,
-					)
-				);
-			}
-			
-			/**
-			 * Get content plain.
-			 *
-			 * @return string
-			 */
-			public function get_content_plain() {
-				return wc_get_template_html(
-					$this->template_plain,
-					array(
-						'order'         => $this->object,
-						'email_heading' => $this->get_heading(),
-						'sent_to_admin' => true,
-						'plain_text'    => true,
-						'email'         => $this,
-					)
-				);
-			}
-		}
 	}
 
 	/**
@@ -343,15 +106,12 @@ class Wbcom_PhotoID_Email {
 	 * @return bool
 	 */
 	public function send_request_email( $order, $custom_message = '' ) {
-		if ( ! $order || ! class_exists( 'WC_Email' ) ) {
+		if ( ! $order || ! class_exists( 'WC_Email' ) || ! class_exists( 'Wbcom_PhotoID_Request_Email' ) ) {
 			return false;
 		}
 
 		// Get WooCommerce mailer.
 		$mailer = WC()->mailer();
-		
-		// Load email classes if they don't exist yet.
-		$this->load_email_classes();
 		
 		// Get the email class.
 		$email = $mailer->emails['Wbcom_PhotoID_Request_Email'];
@@ -395,15 +155,14 @@ class Wbcom_PhotoID_Email {
 	 */
 	public function send_admin_notification( $order, $path ) {
 		// Check if admin notifications are enabled.
-		if ( 'no' === get_option( 'wbcom_photoid_admin_notification', 'yes' ) || ! class_exists( 'WC_Email' ) ) {
+		if ( 'no' === get_option( 'wbcom_photoid_admin_notification', 'yes' ) || 
+			! class_exists( 'WC_Email' ) || 
+			! class_exists( 'Wbcom_PhotoID_Admin_Notification' ) ) {
 			return false;
 		}
 		
 		// Get WooCommerce mailer.
 		$mailer = WC()->mailer();
-		
-		// Load email classes if they don't exist yet.
-		$this->load_email_classes();
 		
 		// Get the email class.
 		$email = $mailer->emails['Wbcom_PhotoID_Admin_Notification'];
@@ -504,5 +263,236 @@ class Wbcom_PhotoID_Email {
 	private function generate_upload_token( $order ) {
 		$key = wp_generate_password( 32, false );
 		return wp_hash( $order->get_id() . '|' . $order->get_billing_email() . '|' . $key );
+	}
+}
+
+// Define the email classes only if WooCommerce is active and the WC_Email class exists
+if ( class_exists( 'WC_Email' ) ) {
+	/**
+	 * Request email class.
+	 */
+	class Wbcom_PhotoID_Request_Email extends WC_Email {
+		/**
+		 * Custom message from admin.
+		 *
+		 * @var string
+		 */
+		public $custom_message = '';
+		
+		/**
+		 * Upload URL for customer.
+		 *
+		 * @var string
+		 */
+		public $upload_url = '';
+		
+		/**
+		 * Constructor.
+		 */
+		public function __construct() {
+			$this->id             = 'wbcom_photoid_request';
+			$this->customer_email = true;
+			$this->title          = __( 'Photo ID Request', 'wbcom-photoid' );
+			$this->description    = __( 'This email is sent to customers when an admin requests a photo ID upload.', 'wbcom-photoid' );
+			$this->template_html  = 'emails/photoid-request.php';
+			$this->template_plain = 'emails/plain/photoid-request.php';
+			$this->placeholders   = array(
+				'{site_title}'      => $this->get_blogname(),
+				'{order_number}'    => '',
+				'{customer_name}'   => '',
+			);
+			
+			// Call parent constructor.
+			parent::__construct();
+			
+			// Default subject and heading.
+			$this->subject = __( 'Action Required: Please upload your ID for order #{order_number}', 'wbcom-photoid' );
+			$this->heading = __( 'Please upload your ID', 'wbcom-photoid' );
+		}
+		
+		/**
+		 * Get email subject.
+		 *
+		 * @return string
+		 */
+		public function get_subject() {
+			return apply_filters( 'wbcom_photoid_request_email_subject', $this->format_string( $this->subject ), $this->object );
+		}
+		
+		/**
+		 * Get email heading.
+		 *
+		 * @return string
+		 */
+		public function get_heading() {
+			return apply_filters( 'wbcom_photoid_request_email_heading', $this->format_string( $this->heading ), $this->object );
+		}
+		
+		/**
+		 * Trigger the sending of this email.
+		 *
+		 * @param int $order_id Order ID.
+		 * @return bool
+		 */
+		public function trigger( $order_id ) {
+			$this->setup_locale();
+			
+			if ( $order_id ) {
+				$this->object = wc_get_order( $order_id );
+				
+				if ( ! $this->object ) {
+					return false;
+				}
+				
+				$this->recipient = $this->object->get_billing_email();
+				
+				$this->placeholders['{order_number}'] = $this->object->get_order_number();
+				$this->placeholders['{customer_name}'] = $this->object->get_formatted_billing_full_name();
+			}
+			
+			if ( $this->is_enabled() && $this->get_recipient() ) {
+				return $this->send( $this->get_recipient(), $this->get_subject(), $this->get_content(), $this->get_headers(), $this->get_attachments() );
+			}
+			
+			$this->restore_locale();
+			
+			return false;
+		}
+		
+		/**
+		 * Get content HTML.
+		 *
+		 * @return string
+		 */
+		public function get_content_html() {
+			return wc_get_template_html(
+				$this->template_html,
+				array(
+					'order'          => $this->object,
+					'email_heading'  => $this->get_heading(),
+					'custom_message' => $this->custom_message,
+					'upload_url'     => $this->upload_url,
+					'sent_to_admin'  => false,
+					'plain_text'     => false,
+					'email'          => $this,
+				)
+			);
+		}
+		
+		/**
+		 * Get content plain.
+		 *
+		 * @return string
+		 */
+		public function get_content_plain() {
+			return wc_get_template_html(
+				$this->template_plain,
+				array(
+					'order'          => $this->object,
+					'email_heading'  => $this->get_heading(),
+					'custom_message' => $this->custom_message,
+					'upload_url'     => $this->upload_url,
+					'sent_to_admin'  => false,
+					'plain_text'     => true,
+					'email'          => $this,
+				)
+			);
+		}
+	}
+
+	/**
+	 * Admin notification email class.
+	 */
+	class Wbcom_PhotoID_Admin_Notification extends WC_Email {
+		/**
+		 * Constructor.
+		 */
+		public function __construct() {
+			$this->id             = 'wbcom_photoid_admin_notification';
+			$this->title          = __( 'Photo ID Uploaded', 'wbcom-photoid' );
+			$this->description    = __( 'This email is sent to admins when a customer uploads a photo ID.', 'wbcom-photoid' );
+			$this->template_html  = 'emails/photoid-admin-notification.php';
+			$this->template_plain = 'emails/plain/photoid-admin-notification.php';
+			$this->placeholders   = array(
+				'{site_title}'      => $this->get_blogname(),
+				'{order_number}'    => '',
+				'{customer_name}'   => '',
+			);
+			
+			// Set default recipient to admin email.
+			$this->recipient = get_option( 'admin_email' );
+			
+			// Call parent constructor.
+			parent::__construct();
+			
+			// Default subject and heading.
+			$this->subject = __( 'Photo ID Uploaded for Order #{order_number}', 'wbcom-photoid' );
+			$this->heading = __( 'Photo ID Uploaded', 'wbcom-photoid' );
+		}
+		
+		/**
+		 * Trigger the sending of this email.
+		 *
+		 * @param int $order_id Order ID.
+		 * @return bool
+		 */
+		public function trigger( $order_id ) {
+			$this->setup_locale();
+			
+			if ( $order_id ) {
+				$this->object = wc_get_order( $order_id );
+				
+				if ( ! $this->object ) {
+					return false;
+				}
+				
+				$this->placeholders['{order_number}'] = $this->object->get_order_number();
+				$this->placeholders['{customer_name}'] = $this->object->get_formatted_billing_full_name();
+			}
+			
+			if ( $this->is_enabled() && $this->get_recipient() ) {
+				return $this->send( $this->get_recipient(), $this->get_subject(), $this->get_content(), $this->get_headers(), $this->get_attachments() );
+			}
+			
+			$this->restore_locale();
+			
+			return false;
+		}
+		
+		/**
+		 * Get content HTML.
+		 *
+		 * @return string
+		 */
+		public function get_content_html() {
+			return wc_get_template_html(
+				$this->template_html,
+				array(
+					'order'         => $this->object,
+					'email_heading' => $this->get_heading(),
+					'sent_to_admin' => true,
+					'plain_text'    => false,
+					'email'         => $this,
+				)
+			);
+		}
+		
+		/**
+		 * Get content plain.
+		 *
+		 * @return string
+		 */
+		public function get_content_plain() {
+			return wc_get_template_html(
+				$this->template_plain,
+				array(
+					'order'         => $this->object,
+					'email_heading' => $this->get_heading(),
+					'sent_to_admin' => true,
+					'plain_text'    => true,
+					'email'         => $this,
+				)
+			);
+		}
 	}
 }
