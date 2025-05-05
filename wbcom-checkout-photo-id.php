@@ -88,9 +88,16 @@ class Wbcom_Checkout_Photo_ID {
 	 * Include required files.
 	 */
 	private function includes() {
+		// Common classes.
+		require_once WBCOM_PHOTOID_PLUGIN_DIR . 'includes/class-wbcom-photoid-privacy.php';
+		require_once WBCOM_PHOTOID_PLUGIN_DIR . 'includes/class-wbcom-photoid-email.php';
+		
 		// Admin classes.
 		if ( is_admin() ) {
 			require_once WBCOM_PHOTOID_PLUGIN_DIR . 'admin/class-wbcom-photoid-admin.php';
+			
+			// Enqueue admin scripts and styles
+			add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
 		}
 	}
 
@@ -145,12 +152,12 @@ class Wbcom_Checkout_Photo_ID {
 	}
 
 	/**
-	 * Enqueue scripts and styles.
+	 * Enqueue frontend scripts and styles.
 	 */
 	public function enqueue_scripts() {
 		if ( is_checkout() ) {
-			wp_enqueue_style( 'wbcom-photoid-style', WBCOM_PHOTOID_PLUGIN_URL . 'assets/css/wbcom-photoid.css', array(), WBCOM_PHOTOID_VERSION );
-			wp_enqueue_script( 'wbcom-photoid-script', WBCOM_PHOTOID_PLUGIN_URL . 'assets/js/wbcom-photoid.js', array( 'jquery' ), WBCOM_PHOTOID_VERSION, true );
+			wp_enqueue_style( 'wbcom-photoid-style', WBCOM_PHOTOID_PLUGIN_URL . 'admin/assets/css/wbcom-photoid.css', array(), WBCOM_PHOTOID_VERSION );
+			wp_enqueue_script( 'wbcom-photoid-script', WBCOM_PHOTOID_PLUGIN_URL . 'admin/assets/js/wbcom-photoid.js', array( 'jquery' ), WBCOM_PHOTOID_VERSION, true );
 			
 			// Localize script with data.
 			wp_localize_script( 'wbcom-photoid-script', 'wbcom_photoid', array(
@@ -160,6 +167,24 @@ class Wbcom_Checkout_Photo_ID {
 					'file_size'     => __( 'File size exceeds the maximum limit.', 'wbcom-photoid' ),
 					'file_type'     => __( 'Invalid file type. Please upload JPG or PNG files only.', 'wbcom-photoid' ),
 				),
+			) );
+		}
+	}
+
+	/**
+	 * Enqueue admin scripts and styles.
+	 * 
+	 * @param string $hook Current admin page.
+	 */
+	public function admin_enqueue_scripts( $hook ) {
+		// Only load on order edit page
+		if ( 'post.php' === $hook && isset( $_GET['post'] ) && 'shop_order' === get_post_type( absint( $_GET['post'] ) ) ) {
+			wp_enqueue_style( 'wbcom-photoid-admin-style', WBCOM_PHOTOID_PLUGIN_URL . 'admin/assets/css/wbcom-photoid.css', array(), WBCOM_PHOTOID_VERSION );
+			wp_enqueue_script( 'wbcom-photoid-admin-script', WBCOM_PHOTOID_PLUGIN_URL . 'admin/assets/js/wbcom-photoid-admin.js', array( 'jquery' ), WBCOM_PHOTOID_VERSION, true );
+			
+			// Localize admin script
+			wp_localize_script( 'wbcom-photoid-admin-script', 'wbcom_photoid_admin', array(
+				'nonce' => wp_create_nonce( 'wbcom_photoid_request' ),
 			) );
 		}
 	}
