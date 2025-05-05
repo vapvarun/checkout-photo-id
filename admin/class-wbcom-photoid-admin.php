@@ -38,6 +38,32 @@ class Wbcom_PhotoID_Admin {
 		
 		// Register AJAX handler for ID requests.
 		add_action( 'wp_ajax_wbcom_photoid_request', array( $this, 'handle_ajax_request' ) );
+		
+		// Add scripts for admin pages.
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
+	}
+	
+	/**
+	 * Enqueue admin scripts.
+	 *
+	 * @param string $hook Hook suffix for the current admin page.
+	 */
+	public function enqueue_admin_scripts( $hook ) {
+		// Only load on order edit screen
+		if ( 'post.php' !== $hook || get_post_type() !== 'shop_order' ) {
+			return;
+		}
+		
+		wp_enqueue_style( 'wbcom-photoid-admin-style', WBCOM_PHOTOID_PLUGIN_URL . 'admin/assets/css/wbcom-photoid.css', array(), WBCOM_PHOTOID_VERSION );
+		wp_enqueue_script( 'wbcom-photoid-admin-script', WBCOM_PHOTOID_PLUGIN_URL . 'admin/assets/js/wbcom-photoid-admin.js', array( 'jquery' ), WBCOM_PHOTOID_VERSION, true );
+		
+		wp_localize_script( 'wbcom-photoid-admin-script', 'wbcom_photoid_admin', array(
+			'nonce'        => wp_create_nonce( 'wbcom_photoid_request' ),
+			'sending_text' => __( 'Sending...', 'wbcom-photoid' ),
+			'sent_text'    => __( 'Request Sent', 'wbcom-photoid' ),
+			'request_text' => __( 'Send Request', 'wbcom-photoid' ),
+			'error_text'   => __( 'Error sending request', 'wbcom-photoid' ),
+		) );
 	}
 
 	/**

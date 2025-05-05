@@ -99,6 +99,7 @@ class Wbcom_Checkout_Photo_ID {
         
         // Create instances of classes.
         new Wbcom_PhotoID_Privacy();
+        new Wbcom_PhotoID_Email();
 	}
 
 	/**
