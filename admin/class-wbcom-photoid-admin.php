@@ -35,6 +35,9 @@ class Wbcom_PhotoID_Admin {
 		
 		// Add admin notices.
 		add_action( 'admin_notices', array( $this, 'admin_notices' ) );
+		
+		// Register AJAX handler for ID requests.
+		add_action( 'wp_ajax_wbcom_photoid_request', array( $this, 'handle_ajax_request' ) );
 	}
 
 	/**
@@ -133,6 +136,42 @@ class Wbcom_PhotoID_Admin {
 					'min'  => '0',
 					'step' => '1',
 				),
+			),
+			
+			array(
+				'title'    => __( 'Email Settings', 'wbcom-photoid' ),
+				'type'     => 'title',
+				'desc'     => __( 'Configure email settings for ID requests.', 'wbcom-photoid' ),
+				'id'       => 'wbcom_photoid_email_options',
+			),
+			
+			array(
+				'title'    => __( 'Admin Notifications', 'wbcom-photoid' ),
+				'desc'     => __( 'Send email notification to admin when customer uploads ID', 'wbcom-photoid' ),
+				'id'       => 'wbcom_photoid_admin_notification',
+				'default'  => 'yes',
+				'type'     => 'checkbox',
+			),
+			
+			array(
+				'title'    => __( 'Request Email Subject', 'wbcom-photoid' ),
+				'desc'     => __( 'Email subject for ID request emails', 'wbcom-photoid' ),
+				'id'       => 'wbcom_photoid_request_subject',
+				'default'  => __( 'Action Required: Please upload your ID for order #{order_number}', 'wbcom-photoid' ),
+				'type'     => 'text',
+			),
+			
+			array(
+				'title'    => __( 'Request Email Heading', 'wbcom-photoid' ),
+				'desc'     => __( 'Email heading for ID request emails', 'wbcom-photoid' ),
+				'id'       => 'wbcom_photoid_request_heading',
+				'default'  => __( 'Please upload your ID', 'wbcom-photoid' ),
+				'type'     => 'text',
+			),
+			
+			array(
+				'type' => 'sectionend',
+				'id'   => 'wbcom_photoid_email_options',
 			),
 			
 			array(
@@ -429,25 +468,38 @@ class Wbcom_PhotoID_Admin {
 	}
 
 	/**
+	 * Handle AJAX request for sending ID request.
+	 */
+	public function handle_ajax_request() {
+		// Instantiate email class to handle the request
+		$email_handler = new Wbcom_PhotoID_Email();
+		$email_handler->handle_request_ajax();
+	}
+
+	/**
 	 * Send email requesting Photo ID.
 	 *
 	 * @param WC_Order $order Order object.
 	 * @return bool
 	 */
 	private function send_id_request_email( $order ) {
-		// TODO: Implement email functionality.
-		// This is a placeholder for the actual email sending logic.
+		// Use the email class to send the request
+		$email_handler = new Wbcom_PhotoID_Email();
+		$result = $email_handler->send_request_email( $order );
 		
 		// Log that request was sent.
-		$order->add_order_note(
-			__( 'Photo ID request email sent to customer.', 'wbcom-photoid' )
-		);
+		if ( $result ) {
+			$order->add_order_note(
+				__( 'Photo ID request email sent to customer.', 'wbcom-photoid' )
+			);
+			
+			// Mark as requested in order meta.
+			$order->update_meta_data( 'wbcom_photo_id_requested', current_time( 'mysql' ) );
+			$order->update_meta_data( 'wbcom_photo_id_requested_by', get_current_user_id() );
+			$order->save();
+		}
 		
-		// Mark as requested in order meta.
-		$order->update_meta_data( 'wbcom_photo_id_requested', current_time( 'mysql' ) );
-		$order->save();
-		
-		return true;
+		return $result;
 	}
 
 	/**
