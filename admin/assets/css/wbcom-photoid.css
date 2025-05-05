@@ -1,0 +1,190 @@
+/**
+ * Wbcom Photo ID Upload Styles
+ *
+ * Frontend and admin styles for the Photo ID upload feature.
+ */
+
+/* Frontend Styles */
+.wbcom-photoid-section {
+    margin: 1.5em 0;
+    padding: 1.5em;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f8f8f8;
+}
+
+.wbcom-photoid-section h3 {
+    margin-top: 0;
+    font-weight: 600;
+    color: #333;
+}
+
+.wbcom-photoid-help {
+    margin-bottom: 1em;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.wbcom-photoid-preview {
+    margin-top: 1em;
+    display: block;
+}
+
+.wbcom-photoid-image-preview {
+    position: relative;
+    display: inline-block;
+    max-width: 200px;
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.wbcom-photoid-image-preview img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.wbcom-photoid-remove-preview {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    line-height: 18px;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    color: #666;
+}
+
+.wbcom-photoid-remove-preview:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+    color: #333;
+}
+
+.wbcom-photoid-error {
+    margin-bottom: 1em;
+    padding: 0.75em 1em;
+    border-left: 4px solid #dc3232;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Admin Styles */
+.wbcom-photoid-admin {
+    padding: 1em;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.wbcom-photoid-admin h4 {
+    margin-top: 0;
+    margin-bottom: 0.75em;
+    font-weight: 600;
+}
+
+.wbcom-photoid-admin p {
+    margin-bottom: 0.75em;
+}
+
+.wbcom-photoid-admin p:last-child {
+    margin-bottom: 0;
+}
+
+.wbcom-photoid-status {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1em;
+    font-weight: 600;
+}
+
+.wbcom-photoid-status .dashicons {
+    margin-right: 0.5em;
+}
+
+.wbcom-photoid-status-uploaded .dashicons {
+    color: #46b450;
+}
+
+.wbcom-photoid-status-missing .dashicons {
+    color: #dc3232;
+}
+
+.wbcom-photoid-status-error .dashicons {
+    color: #ffb900;
+}
+
+.wbcom-photoid-admin.wbcom-photoid-error {
+    border-color: #ffb900;
+    background-color: #fff8e5;
+}
+
+.wbcom-photoid-request-form {
+    margin-top: 1em;
+    padding-top: 1em;
+    border-top: 1px solid #ddd;
+}
+
+/* Order List Column */
+.column-photo_id_status {
+    width: 80px;
+    text-align: center;
+}
+
+.column-photo_id_status .order-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+}
+
+.column-photo_id_status .status-completed {
+    background-color: #c6e1c6;
+}
+
+.column-photo_id_status .status-failed {
+    background-color: #eba3a3;
+}
+
+.column-photo_id_status .status-on-hold {
+    background-color: #f8dda7;
+}
+
+.column-photo_id_status .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* WooCommerce Settings */
+.wc-enhanced-select[name="wbcom_photoid_exempt_categories[]"] {
+    width: 400px;
+    max-width: 100%;
+}
+
+/* Metabox Styles */
+#wbcom_photoid_metabox .inside {
+    padding: 0;
+    margin: 0;
+}
+
+#wbcom_photoid_metabox .button {
+    display: inline-flex;
+    align-items: center;
+}
+
+#wbcom_photoid_metabox .button .dashicons {
+    margin-right: 5px;
+}
+
+#wbcom_photoid_metabox textarea {
+    min-height: 60px;
+}
