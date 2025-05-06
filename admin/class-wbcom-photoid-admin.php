@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController;
+
 /**
  * Wbcom_PhotoID_Admin class.
  */
@@ -22,8 +24,8 @@ class Wbcom_PhotoID_Admin {
 		add_filter( 'woocommerce_get_sections_checkout', array( $this, 'add_section' ) );
 		add_filter( 'woocommerce_get_settings_checkout', array( $this, 'add_settings' ), 10, 2 );
 		
-		// Add meta box to order screen.
-		add_action( 'add_meta_boxes', array( $this, 'add_order_meta_box' ) );
+		// Add meta box to order screen - works with both traditional and HPOS.
+		add_action( 'add_meta_boxes', array( $this, 'add_order_meta_box' ), 30 ); // Higher priority to place after notes
 		
 		// Add ID status column to orders list.
 		add_filter( 'manage_edit-shop_order_columns', array( $this, 'add_order_column' ) );
@@ -52,8 +54,11 @@ class Wbcom_PhotoID_Admin {
 	 * @param string $hook Hook suffix for the current admin page.
 	 */
 	public function enqueue_admin_scripts( $hook ) {
-		// Only load on order edit screen
-		if ( 'post.php' !== $hook || get_post_type() !== 'shop_order' ) {
+		// Load on both traditional order edit page and HPOS order edit page
+		$is_order_page = ('post.php' === $hook && get_post_type() === 'shop_order') || 
+		                 (strpos($hook, 'wc-orders') !== false);
+		
+		if (!$is_order_page) {
 			return;
 		}
 		
@@ -258,26 +263,36 @@ class Wbcom_PhotoID_Admin {
 	}
 
 	/**
-	 * Add meta box to order screen.
+	 * Add meta box to order screen - compatible with both traditional and HPOS.
 	 */
 	public function add_order_meta_box() {
+        // Determine screen ID based on whether HPOS is enabled
+        $screen = class_exists('\Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController') && 
+                  wc_get_container()->get(CustomOrdersTableController::class)->custom_orders_table_usage_is_enabled()
+                  ? wc_get_page_screen_id('shop-order')
+                  : 'shop_order';
+        
 		add_meta_box(
 			'wbcom_photoid_metabox',
 			__( 'Photo ID', 'wbcom-photoid' ),
 			array( $this, 'render_order_meta_box' ),
-			'shop_order',
-			'side',
-			'high'
+			$screen,
+			'normal',  // Place in normal position
+			'low'      // Low priority to ensure it appears after order notes
 		);
 	}
 
 	/**
 	 * Render order meta box content.
 	 *
-	 * @param WP_Post $post Post object.
+	 * @param WP_Post|WC_Order $post_or_order_object Post object or WC_Order object.
 	 */
-	public function render_order_meta_box( $post ) {
-		$order = wc_get_order( $post->ID );
+	public function render_order_meta_box( $post_or_order_object ) {
+        // Get the order object depending on whether we're using HPOS or not
+        $order = ($post_or_order_object instanceof WP_Post) 
+               ? wc_get_order($post_or_order_object->ID) 
+               : $post_or_order_object;
+               
 		if ( ! $order ) {
 			return;
 		}
@@ -286,6 +301,8 @@ class Wbcom_PhotoID_Admin {
 		$upload_date = $order->get_meta( 'wbcom_photo_id_upload_date' );
 		$file_path = $order->get_meta( 'wbcom_photo_id_path' );
 		$mime_type = $order->get_meta( 'wbcom_photo_id_mime' );
+		$original_filename = $order->get_meta( 'wbcom_photo_id_original_filename' );
+		$file_size = $order->get_meta( 'wbcom_photo_id_filesize' );
 		
 		if ( $filename ) {
 			$url = admin_url( 'admin-post.php?action=wbcom_download_photo_id&order_id=' . $order->get_id() . '&_wpnonce=' . wp_create_nonce( 'download_photo_id_' . $order->get_id() ) );
@@ -295,9 +312,9 @@ class Wbcom_PhotoID_Admin {
 			echo esc_html__( 'ID uploaded', 'wbcom-photoid' );
 			echo '</p>';
 			
-			// Add image preview if it's an image
+			// Add image preview if it's an image file
 			if ( file_exists( $file_path ) && in_array( $mime_type, array( 'image/jpeg', 'image/jpg', 'image/png' ) ) ) {
-				// Generate URL for preview
+				// Generate preview URL
 				$preview_url = add_query_arg( array(
 					'action'   => 'wbcom_preview_photo_id',
 					'order_id' => $order->get_id(),
@@ -305,18 +322,28 @@ class Wbcom_PhotoID_Admin {
 					'ts'       => time(), // Cache buster
 				), admin_url( 'admin-post.php' ) );
 				
-				echo '<div class="wbcom-photoid-admin-preview">';
-				echo '<img src="' . esc_url( $preview_url ) . '" alt="ID Preview" />';
+				echo '<div class="wbcom-photoid-admin-preview" style="margin:10px 0 15px;padding:10px;background:#f8f8f8;border:1px solid #ddd;text-align:center;">';
+				echo '<img src="' . esc_url( $preview_url ) . '" alt="ID Preview" style="max-width:100%;height:auto;border-radius:3px;" />';
 				echo '</div>';
 			}
 			
+			// Display file information
+			echo '<p>';
+			if ( $original_filename ) {
+				echo '<strong>' . esc_html__( 'Original filename:', 'wbcom-photoid' ) . '</strong> ' . esc_html( $original_filename ) . '<br>';
+			}
+			echo '<strong>' . esc_html__( 'Stored as:', 'wbcom-photoid' ) . '</strong> ' . esc_html( $filename ) . '<br>';
+			
 			if ( $upload_date ) {
-				echo '<p>';
-				echo '<strong>' . esc_html__( 'Date:', 'wbcom-photoid' ) . '</strong> ';
-				echo esc_html( date_i18n( get_option( 'date_format' ), strtotime( $upload_date ) ) );
-				echo '</p>';
+				echo '<strong>' . esc_html__( 'Uploaded:', 'wbcom-photoid' ) . '</strong> ' . esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $upload_date ) ) ) . '<br>';
 			}
 			
+			if ( $file_size ) {
+				echo '<strong>' . esc_html__( 'Size:', 'wbcom-photoid' ) . '</strong> ' . esc_html( size_format( $file_size ) ) . '<br>';
+			}
+			echo '</p>';
+			
+			// Download button
 			echo '<p>';
 			echo '<a href="' . esc_url( $url ) . '" class="button button-primary">';
 			echo '<span class="dashicons dashicons-download"></span> ';
@@ -526,12 +553,13 @@ class Wbcom_PhotoID_Admin {
 	 * Send email requesting Photo ID.
 	 *
 	 * @param WC_Order $order Order object.
+	 * @param string   $custom_message Optional custom message.
 	 * @return bool
 	 */
-	private function send_id_request_email( $order ) {
+	private function send_id_request_email( $order, $custom_message = '' ) {
 		// Use the email class to send the request
 		$email_handler = new Wbcom_PhotoID_Email();
-		$result = $email_handler->send_request_email( $order );
+		$result = $email_handler->send_request_email( $order, $custom_message );
 		
 		// Log that request was sent.
 		if ( $result ) {
@@ -621,7 +649,7 @@ class Wbcom_PhotoID_Admin {
         header( 'Pragma: no-cache' );
         header( 'Expires: 0' );
         
-        // Log this access.
+        // Log this access if logging is enabled
         if ( 'yes' === get_option( 'wbcom_photoid_log_access', 'yes' ) ) {
             $user = get_user_by( 'id', get_current_user_id() );
             $username = $user ? $user->display_name : __( 'Unknown user', 'wbcom-photoid' );

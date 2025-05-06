@@ -200,8 +200,212 @@
 }
 
 .wbcom-photoid-admin-preview img {
-    max-width: 100%;
+    max-width: 200px;
     height: auto;
     border-radius: 3px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/**
+ * Enhanced Photo ID Metabox Styling
+ */
+
+/* Metabox Container */
+#wbcom_photoid_metabox .inside {
+    padding: 0;
+    margin: 0;
+}
+
+/* Status Indicators */
+.wbcom-photoid-status {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    margin: 0 0 15px;
+    font-size: 14px;
+    font-weight: 600;
+    border-left: 4px solid #ccc;
+    background-color: #f8f8f8;
+}
+
+.wbcom-photoid-status-uploaded {
+    border-color: #46b450;
+    background-color: #ecf7ed;
+}
+
+.wbcom-photoid-status-missing {
+    border-color: #dc3232;
+    background-color: #fbeaea;
+}
+
+.wbcom-photoid-status-error {
+    border-color: #ffb900;
+    background-color: #fff8e5;
+}
+
+.wbcom-photoid-status .dashicons {
+    margin-right: 8px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.wbcom-photoid-status-uploaded .dashicons {
+    color: #46b450;
+}
+
+.wbcom-photoid-status-missing .dashicons {
+    color: #dc3232;
+}
+
+.wbcom-photoid-status-error .dashicons {
+    color: #ffb900;
+}
+
+/* ID Preview */
+.wbcom-photoid-admin-preview {
+    margin: 15px 0 20px;
+    padding: 15px;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.wbcom-photoid-admin-preview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* File Information */
+#wbcom_photoid_metabox p {
+    margin: 12px 15px;
+    line-height: 1.5;
+}
+
+#wbcom_photoid_metabox p strong {
+    display: inline-block;
+    min-width: 120px;
+    color: #23282d;
+}
+
+/* Buttons */
+#wbcom_photoid_metabox .button {
+    display: inline-flex;
+    align-items: center;
+    margin: 5px 15px 15px;
+}
+
+#wbcom_photoid_metabox .button-primary {
+    background-color: #2271b1;
+    border-color: #2271b1;
+}
+
+#wbcom_photoid_metabox .button-primary:hover {
+    background-color: #135e96;
+    border-color: #135e96;
+}
+
+#wbcom_photoid_metabox .button .dashicons {
+    margin-right: 5px;
+}
+
+/* Request Form */
+.wbcom-photoid-request-form {
+    margin: 15px;
+    padding: 15px;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.wbcom-photoid-request-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.wbcom-photoid-request-form textarea {
+    width: 100%;
+    min-height: 80px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Error Messages */
+#wbcom_photoid_metabox .error {
+    margin: 0 15px 15px;
+    padding: 8px 12px;
+    background-color: #fff8e5;
+    border-left: 4px solid #ffb900;
+    color: #444;
+}
+
+/* Status Messages */
+.wbcom-photoid-message {
+    margin: 15px;
+    padding: 10px;
+    border-radius: 3px;
+}
+
+.wbcom-photoid-message-success {
+    background-color: #ecf7ed;
+    border-left: 3px solid #46b450;
+}
+
+.wbcom-photoid-message-error {
+    background-color: #fbeaea;
+    border-left: 3px solid #dc3232;
+}
+
+/* Order List Column */
+.column-photo_id_status {
+    width: 80px;
+    text-align: center;
+}
+
+.column-photo_id_status .order-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+}
+
+.column-photo_id_status .status-completed {
+    background-color: #c6e1c6;
+}
+
+.column-photo_id_status .status-failed {
+    background-color: #eba3a3;
+}
+
+.column-photo_id_status .status-on-hold {
+    background-color: #f8dda7;
+}
+
+.column-photo_id_status .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    #wbcom_photoid_metabox .button {
+        width: calc(100% - 30px);
+        margin: 5px 15px 10px;
+        text-align: center;
+        justify-content: center;
+    }
+    
+    .wbcom-photoid-request-form {
+        margin: 15px 15px 20px;
+    }
 }

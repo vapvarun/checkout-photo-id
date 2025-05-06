@@ -122,7 +122,7 @@ class Wbcom_Checkout_Photo_ID {
         add_action( 'woocommerce_checkout_process', array( $this, 'validate_photo_id_upload' ) );
         
         // Show download link in admin.
-        add_action( 'woocommerce_admin_order_data_after_billing_address', array( $this, 'display_photo_id_in_admin' ) );
+      //  add_action( 'woocommerce_admin_order_data_after_billing_address', array( $this, 'display_photo_id_in_admin' ) );
         
         // Secure download endpoint for admins only.
         add_action( 'admin_post_wbcom_download_photo_id', array( $this, 'secure_download_photo_id' ) );
@@ -379,7 +379,7 @@ class Wbcom_Checkout_Photo_ID {
     }
 
     /**
-     * Show download link in admin.
+     * Show download link and image preview in admin.
      *
      * @param WC_Order $order WooCommerce order object.
      */
@@ -393,12 +393,29 @@ class Wbcom_Checkout_Photo_ID {
         $original_filename = $order->get_meta( 'wbcom_photo_id_original_filename' );
         $upload_date = $order->get_meta( 'wbcom_photo_id_upload_date' );
         $file_size = $order->get_meta( 'wbcom_photo_id_filesize' );
+        $file_path = $order->get_meta( 'wbcom_photo_id_path' );
+        $mime_type = $order->get_meta( 'wbcom_photo_id_mime' );
         
         if ( $filename ) {
             $url = admin_url( 'admin-post.php?action=wbcom_download_photo_id&order_id=' . $order->get_id() . '&_wpnonce=' . wp_create_nonce( 'download_photo_id_' . $order->get_id() ) );
             
             echo '<div class="wbcom-photoid-admin">';
             echo '<h4>' . esc_html__( 'Photo ID', 'wbcom-photoid' ) . '</h4>';
+            
+            // Add image preview if it's an image file
+            if ( file_exists( $file_path ) && in_array( $mime_type, array( 'image/jpeg', 'image/jpg', 'image/png' ) ) ) {
+                // Generate preview URL
+                $preview_url = add_query_arg( array(
+                    'action'   => 'wbcom_preview_photo_id',
+                    'order_id' => $order->get_id(),
+                    '_wpnonce' => wp_create_nonce( 'preview_photo_id_' . $order->get_id() ),
+                    'ts'       => time(), // Cache buster
+                ), admin_url( 'admin-post.php' ) );
+                
+                echo '<div class="wbcom-photoid-admin-preview">';
+                echo '<img src="' . esc_url( $preview_url ) . '" alt="ID Preview" style="max-width:100%;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.1);" />';
+                echo '</div>';
+            }
             
             // Display file information.
             echo '<p>';
@@ -425,6 +442,7 @@ class Wbcom_Checkout_Photo_ID {
             
             echo '</div>';
         } else {
+            // No change to existing code for no ID case
             // Check if there was an upload error.
             $error = $order->get_meta( 'wbcom_photo_id_upload_error' );
             if ( $error ) {
