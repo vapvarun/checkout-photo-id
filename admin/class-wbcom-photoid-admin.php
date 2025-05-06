@@ -41,6 +41,9 @@ class Wbcom_PhotoID_Admin {
 		
 		// Add scripts for admin pages.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
+        
+        // Add image preview endpoint.
+        add_action( 'admin_post_wbcom_preview_photo_id', array( $this, 'secure_preview_photo_id' ) );
 	}
 	
 	/**
@@ -281,6 +284,8 @@ class Wbcom_PhotoID_Admin {
 
 		$filename = $order->get_meta( 'wbcom_photo_id_filename' );
 		$upload_date = $order->get_meta( 'wbcom_photo_id_upload_date' );
+		$file_path = $order->get_meta( 'wbcom_photo_id_path' );
+		$mime_type = $order->get_meta( 'wbcom_photo_id_mime' );
 		
 		if ( $filename ) {
 			$url = admin_url( 'admin-post.php?action=wbcom_download_photo_id&order_id=' . $order->get_id() . '&_wpnonce=' . wp_create_nonce( 'download_photo_id_' . $order->get_id() ) );
@@ -289,6 +294,21 @@ class Wbcom_PhotoID_Admin {
 			echo '<span class="dashicons dashicons-yes-alt"></span> ';
 			echo esc_html__( 'ID uploaded', 'wbcom-photoid' );
 			echo '</p>';
+			
+			// Add image preview if it's an image
+			if ( file_exists( $file_path ) && in_array( $mime_type, array( 'image/jpeg', 'image/jpg', 'image/png' ) ) ) {
+				// Generate URL for preview
+				$preview_url = add_query_arg( array(
+					'action'   => 'wbcom_preview_photo_id',
+					'order_id' => $order->get_id(),
+					'_wpnonce' => wp_create_nonce( 'preview_photo_id_' . $order->get_id() ),
+					'ts'       => time(), // Cache buster
+				), admin_url( 'admin-post.php' ) );
+				
+				echo '<div class="wbcom-photoid-admin-preview">';
+				echo '<img src="' . esc_url( $preview_url ) . '" alt="ID Preview" />';
+				echo '</div>';
+			}
 			
 			if ( $upload_date ) {
 				echo '<p>';
@@ -555,6 +575,71 @@ class Wbcom_PhotoID_Admin {
 			echo '</div>';
 		}
 	}
+    
+    /**
+     * Secure preview endpoint for admins only.
+     */
+    public function secure_preview_photo_id() {
+        // Verify nonce.
+        if ( ! isset( $_GET['_wpnonce'] ) || ! isset( $_GET['order_id'] ) ) {
+            wp_die( esc_html__( 'Invalid request', 'wbcom-photoid' ) );
+        }
+        
+        $order_id = absint( $_GET['order_id'] );
+        
+        if ( ! wp_verify_nonce( $_GET['_wpnonce'], 'preview_photo_id_' . $order_id ) ) {
+            wp_die( esc_html__( 'Security check failed', 'wbcom-photoid' ) );
+        }
+        
+        // Check permissions.
+        if ( ! current_user_can( 'manage_woocommerce' ) && ! current_user_can( 'manage_photo_id' ) ) {
+            wp_die( esc_html__( 'Unauthorized', 'wbcom-photoid' ) );
+        }
+
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            wp_die( esc_html__( 'Invalid order', 'wbcom-photoid' ) );
+        }
+
+        $path = $order->get_meta( 'wbcom_photo_id_path' );
+        $mime = $order->get_meta( 'wbcom_photo_id_mime' );
+        
+        if ( ! $path || ! file_exists( $path ) ) {
+            wp_die( esc_html__( 'File not found', 'wbcom-photoid' ) );
+        }
+        
+        // Set proper content type for images
+        if ( ! empty( $mime ) ) {
+            header( 'Content-Type: ' . $mime );
+        } else {
+            // Default to jpeg if mime type is unknown
+            header( 'Content-Type: image/jpeg' );
+        }
+        
+        // Prevent caching
+        header( 'Cache-Control: private, no-cache, must-revalidate' );
+        header( 'Pragma: no-cache' );
+        header( 'Expires: 0' );
+        
+        // Log this access.
+        if ( 'yes' === get_option( 'wbcom_photoid_log_access', 'yes' ) ) {
+            $user = get_user_by( 'id', get_current_user_id() );
+            $username = $user ? $user->display_name : __( 'Unknown user', 'wbcom-photoid' );
+            
+            $note = sprintf(
+                /* translators: %1$s: user name, %2$s: date/time */
+                __( 'Photo ID previewed by %1$s on %2$s', 'wbcom-photoid' ),
+                $username,
+                date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) )
+            );
+            
+            $order->add_order_note( $note );
+        }
+        
+        // Output the image
+        readfile( $path );
+        exit;
+    }
 }
 
 // Initialize admin class.

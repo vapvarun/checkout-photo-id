@@ -188,3 +188,20 @@
 #wbcom_photoid_metabox textarea {
     min-height: 60px;
 }
+
+/* Admin preview styles */
+.wbcom-photoid-admin-preview {
+    margin: 10px 0 15px;
+    padding: 5px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.wbcom-photoid-admin-preview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
