@@ -25,20 +25,42 @@
 
 /* File Info */
 .wbcom-photoid-file-info {
-    margin: 10px 0;
-    padding: 8px 12px;
+    margin: 12px 0;
+    padding: 10px 15px;
     background-color: #e7f5ff;
     border-left: 3px solid #4a90e2;
     border-radius: 3px;
     display: none;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+/* Success Feedback Message */
+.photo-id-feedback {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: #f0f9e6;
+    border-left: 3px solid #46b450;
+    border-radius: 3px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+
+.photo-id-feedback .dashicons {
+    color: #46b450;
+    margin-left: 5px;
 }
 
 /* Upload Button */
 .wbcom-photoid-upload-btn {
-    margin: 10px 0 !important;
-    padding: 8px 15px !important;
+    margin: 12px 0 !important;
+    padding: 10px 16px !important;
     font-weight: 600 !important;
     display: inline-block !important;
+    min-width: 120px;
+    text-align: center;
 }
 
 .wbcom-photoid-upload-btn:disabled {
@@ -65,11 +87,12 @@
 
 /* Status Message */
 .wbcom-photoid-status {
-    margin: 10px 0;
-    padding: 8px 12px;
+    margin: 12px 0;
+    padding: 10px 15px;
     border-radius: 3px;
     display: none;
     align-items: center;
+    font-size: 14px;
 }
 
 .wbcom-photoid-status .dashicons {
@@ -93,44 +116,58 @@
     display: flex;
 }
 
+/* Preview Container */
+.wbcom-photoid-preview {
+    margin: 12px 0;
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
 /* Image Preview */
 .wbcom-photoid-image-preview {
     position: relative;
     display: inline-block;
-    max-width: 200px;
-    margin-top: 10px;
+    max-width: 280px;
+    width: 100%;
+    margin: 10px auto;
     border: 1px solid #ddd;
     border-radius: 4px;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
 }
 
 .wbcom-photoid-image-preview img {
     display: block;
     max-width: 100%;
     height: auto;
+    margin: 0 auto;
 }
 
 .wbcom-photoid-remove-preview {
     position: absolute;
-    top: 5px;
-    right: 5px;
-    width: 24px;
-    height: 24px;
-    line-height: 22px;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    line-height: 26px;
     text-align: center;
     background-color: rgba(255, 255, 255, 0.9);
     border-radius: 50%;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: bold;
     color: #666;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    z-index: 5;
 }
 
 .wbcom-photoid-remove-preview:hover {
     background-color: rgba(255, 0, 0, 0.1);
     color: #333;
+    transform: scale(1.1);
 }
 
 /* Error Message */
@@ -140,6 +177,19 @@
     border-left: 4px solid #dc3232;
     background-color: #f8d7da;
     color: #721c24;
+}
+
+/* File input styling improvements */
+input[type="file"]#photo_id {
+    display: block;
+    margin: 8px 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 8px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 /* Responsive styling */
@@ -155,5 +205,22 @@
     
     .wbcom-photoid-image-preview {
         max-width: 100%;
+    }
+    
+    .wbcom-photoid-remove-preview {
+        width: 32px;
+        height: 32px;
+        line-height: 30px;
+        font-size: 20px;
+    }
+}
+
+/* For touch devices */
+@media (hover: none) {
+    .wbcom-photoid-remove-preview {
+        width: 32px;
+        height: 32px;
+        line-height: 30px;
+        font-size: 20px;
     }
 }

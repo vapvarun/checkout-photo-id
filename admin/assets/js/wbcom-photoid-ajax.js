@@ -15,6 +15,7 @@
             this.cacheElements();
             this.initializeValidation();
             this.bindEvents();
+            this.checkForExistingPreview();
         },
 
         /**
@@ -44,6 +45,22 @@
         },
 
         /**
+         * Check for existing preview (for page reloads)
+         */
+        checkForExistingPreview: function() {
+            // If there's a stored file ID in sessionStorage, restore the visual feedback
+            if (sessionStorage.getItem('photo_id_selected') === 'yes') {
+                var uploadId = sessionStorage.getItem('photo_id_upload_id');
+                if (uploadId) {
+                    this.fileUploaded = true;
+                    this.$uploadButton.text(wbcom_photoid.change_photo_text || 'Change Photo');
+                    this.$statusMessage.html('<span class="dashicons dashicons-yes-alt"></span> ' + 
+                        (wbcom_photoid.success_text || 'File uploaded successfully')).addClass('wbcom-photoid-status-success').show();
+                }
+            }
+        },
+
+        /**
          * Bind event handlers
          */
         bindEvents: function() {
@@ -63,6 +80,14 @@
                     return false;
                 }
             });
+
+            // Handle browser back button
+            window.addEventListener('pageshow', function(event) {
+                // If the page is loaded from cache (back button)
+                if (event.persisted) {
+                    this.checkForExistingPreview();
+                }
+            }.bind(this));
         },
 
         /**
@@ -96,16 +121,39 @@
                 return;
             }
             
-            // Show file info
+            // Show file info with filename and size
             this.$fileInfo.html('<strong>' + file.name + '</strong> (' + this.formatFileSize(file.size) + ')').show();
             
             // Enable upload button
             this.$uploadButton.prop('disabled', false);
             
+            // Store in session
+            sessionStorage.setItem('photo_id_selected', 'yes');
+            
+            // Remove any "removed" flag
+            $('#wbcom_photoid_removed').remove();
+            
             // Show file preview if it's an image
             if (file.type.match('image.*')) {
                 this.createPreview(file);
             }
+
+            // Add visual feedback WITHOUT duplicating the filename
+            var $feedback = $('<div class="photo-id-feedback"></div>');
+            $feedback.html('File selected <span class="dashicons dashicons-yes"></span>');
+            
+            // Remove existing feedback if any
+            $('.photo-id-feedback').remove();
+            
+            // Add new feedback after the file info
+            this.$fileInfo.after($feedback);
+            
+            // Remove any error messages
+            $('.woocommerce-error').each(function() {
+                if ($(this).text().indexOf('Photo ID') !== -1) {
+                    $(this).remove();
+                }
+            });
         },
 
         /**
@@ -135,12 +183,15 @@
             reader.onload = function(e) {
                 var $preview = $('<div class="wbcom-photoid-image-preview"></div>');
                 $preview.append('<img src="' + e.target.result + '" alt="ID Preview" />');
-                $preview.append('<span class="wbcom-photoid-remove-preview">×</span>');
+                $preview.append('<span class="wbcom-photoid-remove-preview" title="Remove">×</span>');
                 
-                this.$previewArea.append($preview);
+                this.$previewArea.html($preview);
                 
                 // Add remove button functionality
                 $('.wbcom-photoid-remove-preview').on('click', this.handleRemoveFile.bind(this));
+                
+                // Improve accessibility
+                $('.wbcom-photoid-remove-preview').attr('role', 'button').attr('aria-label', 'Remove selected file');
             }.bind(this);
             
             reader.readAsDataURL(file);
@@ -149,15 +200,28 @@
         /**
          * Handle file removal
          */
-        handleRemoveFile: function() {
+        handleRemoveFile: function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             this.$uploadField.val('');
             this.clearUI();
             this.fileUploaded = false;
+            
+            // Reset upload button text
+            this.$uploadButton.text(wbcom_photoid.upload_text || 'Upload ID');
+            
+            // Clear session storage
+            sessionStorage.removeItem('photo_id_selected');
+            sessionStorage.removeItem('photo_id_upload_id');
             
             // Add hidden input to indicate file was removed
             if ($('#wbcom_photoid_removed').length === 0) {
                 this.$uploadSection.append('<input type="hidden" id="wbcom_photoid_removed" name="wbcom_photoid_removed" value="1">');
             }
+            
+            // Remove feedback message
+            $('.photo-id-feedback').remove();
         },
 
         /**
@@ -170,6 +234,7 @@
             this.$progressBarInner.width('0%');
             this.$statusMessage.empty().removeClass('wbcom-photoid-status-success wbcom-photoid-status-error').hide();
             $('.wbcom-photoid-error').remove();
+            $('.photo-id-feedback').remove();
         },
 
         /**
@@ -197,7 +262,7 @@
             this.$progressBarInner.width('0%');
             
             // Disable upload button
-            this.$uploadButton.prop('disabled', true).text(wbcom_photoid.uploading_text);
+            this.$uploadButton.prop('disabled', true).text(wbcom_photoid.uploading_text || 'Uploading...');
             
             // Create FormData object
             var formData = new FormData();
@@ -248,29 +313,41 @@
                             $('#wbcom_photoid_upload_id').val(response.data.upload_id);
                         }
                         
+                        // Save upload ID in session storage
+                        sessionStorage.setItem('photo_id_upload_id', response.data.upload_id);
+                        
                         // Mark as uploaded
                         this.fileUploaded = true;
                         
                         // Change button text
-                        this.$uploadButton.text(wbcom_photoid.change_photo_text);
+                        this.$uploadButton.text(wbcom_photoid.change_photo_text || 'Change Photo');
                         
                         // Enable button again to allow changing the file
                         this.$uploadButton.prop('disabled', false);
                         
                         // Remove any "removed" flag
                         $('#wbcom_photoid_removed').remove();
+                        
+                        // Update feedback message without repeating filename
+                        if ($('.photo-id-feedback').length) {
+                            $('.photo-id-feedback').html('File uploaded successfully <span class="dashicons dashicons-yes"></span>');
+                        } else {
+                            var $feedback = $('<div class="photo-id-feedback"></div>');
+                            $feedback.html('File uploaded successfully <span class="dashicons dashicons-yes"></span>');
+                            this.$fileInfo.after($feedback);
+                        }
                     } else {
                         // Show error
                         this.showError(response.data.message);
                         this.$progressBar.hide();
-                        this.$uploadButton.prop('disabled', false).text(wbcom_photoid.upload_text);
+                        this.$uploadButton.prop('disabled', false).text(wbcom_photoid.upload_text || 'Upload ID');
                     }
                 }.bind(this),
                 error: function() {
                     this.uploadInProgress = false;
                     this.showError(wbcom_photoid.error_messages.upload_failed);
                     this.$progressBar.hide();
-                    this.$uploadButton.prop('disabled', false).text(wbcom_photoid.upload_text);
+                    this.$uploadButton.prop('disabled', false).text(wbcom_photoid.upload_text || 'Upload ID');
                 }.bind(this)
             });
         },
@@ -292,18 +369,26 @@
             // If file was removed, require a new upload
             if ($('#wbcom_photoid_removed').length > 0 && !this.fileUploaded) {
                 this.showError(wbcom_photoid.error_messages.missing_file);
+                this.scrollToUploadSection();
                 return false;
+            }
+            
+            // Check session storage first (in case file was already selected)
+            if (sessionStorage.getItem('photo_id_selected') === 'yes' && sessionStorage.getItem('photo_id_upload_id')) {
+                return true;
             }
             
             // Check if a file was uploaded
             if (!this.fileUploaded && $photoIdField[0].files.length === 0) {
                 this.showError(wbcom_photoid.error_messages.missing_file);
+                this.scrollToUploadSection();
                 return false;
             }
             
             // If there's a file selected but not uploaded yet, show an error
             if (!this.fileUploaded && $photoIdField[0].files.length > 0) {
                 this.showError(wbcom_photoid.error_messages.not_uploaded);
+                this.scrollToUploadSection();
                 return false;
             }
             
@@ -329,9 +414,15 @@
             // Also update status message
             this.$statusMessage.html('<span class="dashicons dashicons-warning"></span> ' + message).addClass('wbcom-photoid-status-error').show();
             
-            // Scroll to error message
+            this.scrollToUploadSection();
+        },
+        
+        /**
+         * Scroll to upload section
+         */
+        scrollToUploadSection: function() {
             $('html, body').animate({
-                scrollTop: $error.offset().top - 100
+                scrollTop: this.$uploadSection.offset().top - 100
             }, 500);
         }
     };
