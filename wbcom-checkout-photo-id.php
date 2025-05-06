@@ -30,6 +30,7 @@ add_action( 'before_woocommerce_init', function() {
     }
 });
 
+
 /**
  * Main Wbcom Checkout Photo ID Upload Class.
  *
@@ -206,82 +207,49 @@ class Wbcom_Checkout_Photo_ID {
     }
 
     /**
-     * Validate the checkout process.
+     * Validate file upload.
      */
     public function validate_photo_id_upload() {
         // Check if ID upload is required for the current cart.
-        if ( ! $this->is_photo_id_required() ) {
+        if (!$this->is_photo_id_required()) {
             return;
         }
         
-        // For AJAX uploads, we just need to check if an upload ID is provided.
-        if ( isset( $_POST['wbcom_photoid_upload_id'] ) ) {
-            $upload_id = sanitize_text_field( wp_unslash( $_POST['wbcom_photoid_upload_id'] ) );
-            
-            // Check if this ID was later removed
-            if ( isset( $_POST['wbcom_photoid_removed'] ) && $_POST['wbcom_photoid_removed'] == '1' ) {
-                wc_add_notice(
-                    apply_filters(
-                        'wbcom_photoid_missing_error',
-                        __( 'Please upload a valid Photo ID.', 'wbcom-photoid' )
-                    ),
-                    'error'
-                );
-                return;
-            }
-            
-            // Verify the upload exists in session
-            if ( WC()->session && ! WC()->session->get( 'wbcom_photoid_temp_' . $upload_id ) ) {
-                wc_add_notice(
-                    apply_filters(
-                        'wbcom_photoid_missing_error',
-                        __( 'Your uploaded ID could not be found. Please upload it again.', 'wbcom-photoid' )
-                    ),
-                    'error'
-                );
-                return;
-            }
-            
-            // All good, validation passed
+        // Skip validation if no file is uploaded - let client-side validation handle this
+        if (!isset($_FILES['photo_id']) || empty($_FILES['photo_id']['name'])) {
             return;
         }
         
-        // If we get here, no AJAX upload was done, so check for traditional upload.
-        // This is a fallback for browsers without JavaScript.
-        if ( ! isset( $_FILES['photo_id'] ) || $_FILES['photo_id']['error'] !== UPLOAD_ERR_OK ) {
-            wc_add_notice(
-                apply_filters(
-                    'wbcom_photoid_missing_error',
-                    __( 'Please upload a valid Photo ID (JPG/PNG, max 2MB).', 'wbcom-photoid' )
-                ),
-                'error'
-            );
+        // Check for upload errors
+        if ($_FILES['photo_id']['error'] !== UPLOAD_ERR_OK) {
+            $error_message = __('There was an error uploading your Photo ID. Please try again.', 'wbcom-photoid');
+            wc_add_notice($error_message, 'error');
             return;
         }
         
-        // File type validation.
-        $file_type = wp_check_filetype( $_FILES['photo_id']['name'] );
+        // File type validation
+        $file_type = wp_check_filetype($_FILES['photo_id']['name']);
         $allowed_types = $this->get_allowed_mime_types();
         
-        if ( ! $file_type['type'] || ! in_array( $file_type['type'], $allowed_types, true ) ) {
+        if (!$file_type['type'] || !in_array($file_type['type'], $allowed_types, true)) {
             wc_add_notice(
                 apply_filters(
                     'wbcom_photoid_filetype_error',
-                    __( 'Invalid file type. Please upload a valid JPG or PNG file.', 'wbcom-photoid' )
+                    __('Invalid file type. Please upload a valid JPG or PNG file.', 'wbcom-photoid')
                 ),
                 'error'
             );
             return;
         }
         
-        // File size validation.
-        $max_size = apply_filters( 'wbcom_photoid_max_file_size', 2 ) * 1024 * 1024; // Convert MB to bytes.
+        // File size validation
+        $max_size = apply_filters('wbcom_photoid_max_file_size', 2) * 1024 * 1024;
         
-        if ( $_FILES['photo_id']['size'] > $max_size ) {
+        if ($_FILES['photo_id']['size'] > $max_size) {
             wc_add_notice(
                 apply_filters(
                     'wbcom_photoid_filesize_error',
-                    sprintf( __( 'File size exceeds the maximum limit of %d MB.', 'wbcom-photoid' ), $max_size / ( 1024 * 1024 ) )
+                    sprintf(__('File size exceeds the maximum limit of %d MB.', 'wbcom-photoid'), $max_size / (1024 * 1024))
                 ),
                 'error'
             );

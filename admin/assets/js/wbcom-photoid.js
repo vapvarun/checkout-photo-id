@@ -15,6 +15,30 @@
             this.cacheElements();
             this.bindEvents();
             this.initializeValidation();
+            
+            // Add session storage tracking for file selection
+            this.$uploadField.on('change', function() {
+                if (this.files.length > 0) {
+                    sessionStorage.setItem('photo_id_selected', 'yes');
+                    
+                    // Add visual feedback
+                    var $feedback = $('<div class="photo-id-feedback" style="margin-top:10px;padding:8px;background:#f0f9e6;border-left:3px solid #46b450;"></div>');
+                    $feedback.html('File selected: <strong>' + this.files[0].name + '</strong>');
+                    
+                    // Remove existing feedback if any
+                    $('.photo-id-feedback').remove();
+                    
+                    // Add new feedback after the preview area
+                    this.$previewArea.after($feedback);
+                    
+                    // Remove any error messages
+                    $('.woocommerce-error').each(function() {
+                        if ($(this).text().indexOf('Photo ID') !== -1) {
+                            $(this).remove();
+                        }
+                    });
+                }
+            }.bind(this));
         },
 
         /**
@@ -105,6 +129,8 @@
                 $('.wbcom-photoid-remove-preview').on('click', function() {
                     this.$uploadField.val('');
                     this.$previewArea.empty();
+                    // Clear session storage when file is removed
+                    sessionStorage.removeItem('photo_id_selected');
                 }.bind(this));
             }.bind(this);
             
@@ -125,7 +151,12 @@
                 return true;
             }
             
-            // Check if a file is selected
+            // Check session storage first (in case file was already selected)
+            if (sessionStorage.getItem('photo_id_selected') === 'yes') {
+                return true;
+            }
+            
+            // Check if a file is selected now
             if ($photoIdField[0].files.length === 0) {
                 this.showError(wbcom_photoid.error_messages.missing_file || 'Please select a photo ID file.');
                 return false;
